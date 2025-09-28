@@ -1,0 +1,144 @@
+# 🎬 VistaPlay – Movie Recommendation App
+
+## 📖 Overview
+
+**VistaPlay** is an online movie streaming and recommendation app that helps users discover trending, popular, and personalized movie suggestions.  
+It features a modern user interface with search, filtering, and detailed movie pages, powered by a **Firebase backend** and deployed on **Vercel**.
+
+Built with **Next.js (React)** and styled using **Tailwind CSS**, VistaPlay ensures a responsive and optimized user experience.
+
+---
+
+## ✨ Features
+
+- 🔎 **Movie Search & Browse:** Find movies by title, genre, or keyword.
+- 📈 **Trending & Popular Movies:** Dynamic display of trending content.
+- 🎥 **Detailed Movie Pages:** Overview, cast, ratings, and related movies.
+- ⭐ **Recommendations:** Suggestions based on user preferences/history.
+- 🔐 **Authentication:** User sign-up/login with Firebase Auth.
+- 📂 **Watchlist & Favorites:** Save and manage personal movie lists.
+- 🌙 **Dark Mode Support:** Theme toggle for user-friendly UI.
+- 🚀 **Fast Deployment:** Hosted on Vercel with GitHub integration.
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend:** Next.js (React), Tailwind CSS
+- **Backend/Database:** Firebase (Firestore, Authentication, Storage)
+- **Deployment:** Vercel
+- **API Handling:** Firebase SDK / REST API
+- **Version Control:** Git + GitHub
+
+---
+
+## 📂 Project Structure
+
+```bash
+VistaPlay/
+├── public/                 # Static assets (images, icons, etc.)
+├── src/
+│   ├── components/         # Reusable UI components (Navbar, Footer, MovieCard, etc.)
+│   ├── pages/              # Next.js pages (index.tsx, movies/[id].tsx, etc.)
+│   ├── constants/          # Static constants (genres, routes, configs)
+│   ├── interfaces/         # TypeScript interfaces (Movie, User, etc.)
+│   ├── assets/             # Custom images, logos
+│   ├── utils/              # Helper functions
+│   ├── lib/                # Firebase config & API setup
+│   └── styles/             # Global styles (if any beyond Tailwind)
+├── .env.local              # Environment variables (Firebase keys, API keys)
+├── package.json
+├── README.md
+└── tsconfig.json
+```
+
+---
+
+## ⚙️ Setup & Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/vistaplay.git
+   cd vistaplay
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**  
+   Create a `.env.local` file in the root directory and add your Firebase config:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   ```
+
+4. **Run locally**
+   ```bash
+   npm run dev
+   ```
+   Visit [http://localhost:3000](http://localhost:3000).
+
+5. **Build for production**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+---
+
+## 🔥 Firebase Integration
+
+- **Firestore:** Stores movies, watchlists, and user preferences.
+- **Firebase Auth:** Handles login/signup (Email/Password, Google, etc.).
+- **Firebase Hosting/Storage (optional):** Store images or static movie posters.
+
+> **Note:** Enable Firestore Database and Authentication in the Firebase Console.
+
+---
+
+## 🚀 Deployment (Vercel)
+
+1. Push your project to GitHub.
+2. Go to [Vercel](https://vercel.com/).
+3. Click **New Project** → Import your GitHub repo → Select VistaPlay.
+4. Add environment variables in Vercel Project Settings.
+5. Deploy. Vercel will auto-build and provide a live link.
+
+---
+
+## 🎮 Usage
+
+- Visit the deployed app.
+- Sign up or log in to personalize your experience.
+- Browse trending and recommended movies.
+- Add movies to your Watchlist.
+- Click any movie for details (cast, reviews, related suggestions).
+
+---
+
+## 🚧 Future Improvements
+
+- 🎬 Support for TV Shows & Anime
+- 📱 Mobile app version (React Native)
+- 👥 Social features (friend lists, shared recommendations)
+- 💳 Subscription & payment integration
+- 🤖 AI-driven recommendations (based on viewing history)
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🙌 Credits
+
+Built by **Alidu Gershon Elorm** – [GitHub](https://github.com/Ghost-610)  
+Powered by Next.js, Firebase, and Vercel.

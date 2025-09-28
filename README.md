@@ -1,4 +1,4 @@
-# ALX Movie App
+# VistaPay Movie App
 
 A full-stack movie discovery and trending platform built with [Next.js](https://nextjs.org), Firebase, and The Movie Database (TMDB) API. Users can browse trending movies, view detailed information, register/login, and favorite ("heat") movies to influence their popularity.
 
@@ -57,5 +57,5 @@ A full-stack movie discovery and trending platform built with [Next.js](https://
 ### 1. Clone the Repository
 
 ```sh
-git clone https://github.com/your-username/alx-movie-app.git
-cd alx-movie-app
+git clone https://github.com/Ghost-610/alx-project-nexus.git 
+cd VistaPay-movie-app
