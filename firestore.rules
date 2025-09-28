@@ -1,0 +1,10 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      // Allow read for authenticated users only (recommended)
+      allow read: if request.auth != null;
+      // Disable writes for now
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Inception",
+  "poster": "https://...",
+  "synopsis": "...",
+  "views": 123,          // integer, incremented by clients/cloud functions
+  "likes": 10,           // integer
+  "heatCount": 50,       // optional aggregated measure
+  "popularity": 85,      // numeric score used for ordering
+  "trending": true,      // boolean set by the scheduled function
+  "updatedAt": 1699990000000 // number or timestamp
+}
