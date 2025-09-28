@@ -2,33 +2,43 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth"; // named export
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/clientApp";
-import type { User } from "firebase/auth";
+import type { Timestamp } from "firebase/firestore";
+
+type FirestoreTime = Timestamp | string | number | null | undefined;
 
 type Movie = {
   id: string;
   title?: string;
   poster?: string;
-  watchedAt?: any; // Firestore Timestamp or ISO string
-  addedAt?: any;
+  watchedAt?: FirestoreTime;
+  addedAt?: FirestoreTime;
 };
 
-const formatWatchedAt = (raw: any) => {
+const formatWatchedAt = (raw: FirestoreTime): string => {
   if (!raw) return "";
-  if (typeof raw === "object" && typeof raw.toDate === "function") {
-    return raw.toDate().toLocaleString();
+  // Firestore Timestamp
+  if (typeof raw === "object" && raw !== null && typeof (raw as Timestamp).toDate === "function") {
+    try {
+      return (raw as Timestamp).toDate().toLocaleString();
+    } catch {
+      return String(raw);
+    }
   }
+  // string / number
   try {
-    return new Date(raw).toLocaleString();
+    return new Date(raw as string | number).toLocaleString();
   } catch {
     return String(raw);
   }
 };
 
 const DashboardPage: React.FC = () => {
-  const { user, loading, signingOut, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const [favorites, setFavorites] = useState<Movie[]>([]);
   const [recent, setRecent] = useState<Movie[]>([]);
   const [loadingMovies, setLoadingMovies] = useState(false);
@@ -36,7 +46,7 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     if (loading || !user) return;
 
-    const uid = user.uid;
+    const uid = user.id;
     if (!uid) return;
 
     let cancelled = false;
@@ -47,23 +57,41 @@ const DashboardPage: React.FC = () => {
         // favorites
         const favCol = collection(db, "users", uid, "favorites");
         const favSnap = await getDocs(favCol);
-        const favs = favSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        const favs: Movie[] = favSnap.docs.map((d) => {
+          const data = d.data() as Partial<Movie>;
+          return {
+            id: d.id,
+            title: data.title,
+            poster: data.poster,
+            addedAt: data.addedAt as FirestoreTime,
+          };
+        });
         if (!cancelled) setFavorites(favs);
 
         // recentlySeen (ordered by watchedAt desc)
         const recentCol = collection(db, "users", uid, "recentlySeen");
         const recentQuery = query(recentCol, orderBy("watchedAt", "desc"), limit(20));
         const recentSnap = await getDocs(recentQuery);
-        const recents = recentSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        const recents: Movie[] = recentSnap.docs.map((d) => {
+          const data = d.data() as Partial<Movie>;
+          return {
+            id: d.id,
+            title: data.title,
+            poster: data.poster,
+            watchedAt: data.watchedAt as FirestoreTime,
+          };
+        });
         if (!cancelled) setRecent(recents);
       } catch (err) {
+        // keep logging the error; don't throw
+        // eslint-disable-next-line no-console
         console.error("Failed to load favorites/recently seen:", err);
       } finally {
         if (!cancelled) setLoadingMovies(false);
       }
     };
 
-    loadLists();
+    void loadLists();
 
     return () => {
       cancelled = true;
@@ -86,9 +114,8 @@ const DashboardPage: React.FC = () => {
           <button
             onClick={() => void signOut()}
             className="px-3 py-1 rounded bg-red-50 text-red-700"
-            disabled={signingOut}
           >
-            {signingOut ? "Signing out..." : "Sign out"}
+            Sign out
           </button>
         </div>
 
@@ -97,13 +124,13 @@ const DashboardPage: React.FC = () => {
           {user ? (
             <div className="mt-3 text-sm text-gray-700 space-y-1">
               <div>
-                <strong>UID:</strong> {user.uid}
+                <strong>UID:</strong> {user.id}
               </div>
               <div>
                 <strong>Email:</strong> {user.email ?? "—"}
               </div>
               <div>
-                <strong>Display name:</strong> {user.displayName ?? "—"}
+                <strong>Display name:</strong> {user.username ?? "—"}
               </div>
             </div>
           ) : (
@@ -120,13 +147,14 @@ const DashboardPage: React.FC = () => {
               <ul className="space-y-3">
                 {recent.map((m) => (
                   <li key={m.id} className="flex items-center gap-3">
-                    <div className="w-16 h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0 relative">
                       {m.poster ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={m.poster}
-                          alt={m.title}
-                          className="w-full h-full object-cover"
+                          alt={m.title ?? "Movie poster"}
+                          fill
+                          sizes="80px"
+                          style={{ objectFit: "cover" }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
@@ -145,7 +173,7 @@ const DashboardPage: React.FC = () => {
               </ul>
             ) : (
               <div className="text-sm text-gray-500">
-                You haven't watched anything recently.
+                You haven&#39;t watched anything recently.
               </div>
             )}
           </section>
@@ -158,13 +186,14 @@ const DashboardPage: React.FC = () => {
               <ul className="space-y-3">
                 {favorites.map((m) => (
                   <li key={m.id} className="flex items-center gap-3">
-                    <div className="w-16 h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-20 bg-gray-200 rounded overflow-hidden flex-shrink-0 relative">
                       {m.poster ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={m.poster}
-                          alt={m.title}
-                          className="w-full h-full object-cover"
+                          alt={m.title ?? "Movie poster"}
+                          fill
+                          sizes="80px"
+                          style={{ objectFit: "cover" }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
@@ -190,12 +219,12 @@ const DashboardPage: React.FC = () => {
         <div className="mt-6">
           <h3 className="font-medium">Quick actions</h3>
           <div className="mt-2 flex gap-2">
-            <a href="/profile" className="px-3 py-1 rounded border text-sm">
+            <Link href="/profile" className="px-3 py-1 rounded border text-sm">
               Profile
-            </a>
-            <a href="/settings" className="px-3 py-1 rounded border text-sm">
+            </Link>
+            <Link href="/settings" className="px-3 py-1 rounded border text-sm">
               Settings
-            </a>
+            </Link>
           </div>
         </div>
       </div>

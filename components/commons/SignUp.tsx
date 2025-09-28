@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/router";
-
+import Link from "next/link";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ApiResponse = {
@@ -90,7 +90,7 @@ const SignIn: React.FC = () => {
       setTimeout(() => {
         router.push("/dashboard");
       }, 1800);
-    } catch (err) {
+    } catch {
       setErrors({ form: "Network error. Please try again." });
       showTemporaryToast("error", "Network error. Please try again.");
     } finally {
@@ -128,7 +128,7 @@ const SignIn: React.FC = () => {
       );
 
       setTimeout(() => router.push("/dashboard"), 1500);
-    } catch (err) {
+    } catch {
       setErrors({ form: "Social sign-in error. Try again." });
       showTemporaryToast("error", "Social sign-in error. Try again.");
     } finally {
@@ -283,9 +283,9 @@ const SignIn: React.FC = () => {
 
         <div className="mt-5 text-center text-sm text-gray-600">
           Already have an account?{" "}
-          <a href="/auth/login" className="text-amber-600 hover:underline">
-            Log In
-          </a>
+         <Link href="/auth/login" className="text-amber-600 hover:underline">
+  Log In
+</Link>
         </div>
 
         {/* Returned user preview (display before redirect) */}

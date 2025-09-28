@@ -31,17 +31,17 @@
 //   }
 // }
 
-
 // pages/movies/[id].tsx
 import React from "react";
 import type { GetServerSideProps } from "next";
+import Image from "next/image";
 import { db } from "@/lib/firebase/clientApp";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, DocumentData, Timestamp } from "firebase/firestore";
 
 type MovieData = {
-  title?: string;
+  title?: string | null;
   poster?: string | null;
-  synopsis?: string;
+  synopsis?: string | null;
   popularity?: number;
   tmdbId?: number;
   voteAverage?: number;
@@ -56,17 +56,30 @@ type MoviePageProps = {
   movie: MovieData | null;
 };
 
-function serializeFirestoreValue(value: any): any {
+function serializeFirestoreValue(value: unknown): string | null {
   // Firestore Timestamp has toDate()
-  if (value && typeof value === "object" && typeof value.toDate === "function") {
-    return value.toDate().toISOString();
+  if (value && typeof value === "object" && "toDate" in (value as object)) {
+    const maybeTs = value as Timestamp;
+    if (typeof maybeTs.toDate === "function") {
+      return maybeTs.toDate().toISOString();
+    }
   }
-  // If it's a plain JS Date
+
   if (value instanceof Date) {
     return value.toISOString();
   }
-  // otherwise return as-is (string, number, boolean, null)
-  return value;
+
+  if (typeof value === "string" || typeof value === "number") {
+    try {
+      const d = new Date(value as string | number);
+      if (!Number.isNaN(d.getTime())) return d.toISOString();
+    } catch {
+      // fallthrough
+    }
+    return String(value);
+  }
+
+  return null;
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ id, movie }) => {
@@ -81,14 +94,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ id, movie }) => {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">{movie.title}</h1>
-      <img
-        src={movie.poster ?? "/placeholder-movie.png"}
-        alt={movie.title ?? "Poster"}
-        className="rounded-lg mb-4 w-full max-w-xs"
-      />
+
+      <div className="mb-4 w-full max-w-xs">
+        <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100">
+          <Image
+            src={movie.poster ?? "/placeholder-movie.png"}
+            alt={movie.title ?? "Poster"}
+            fill
+            style={{ objectFit: "cover" }}
+            sizes="(max-width: 640px) 100vw, 300px"
+            priority={false}
+          />
+        </div>
+      </div>
+
       <p className="text-gray-300">{movie.synopsis ?? "No synopsis available."}</p>
 
-      <div className="text-sm text-gray-500 mt-4">
+      <div className="text-sm text-gray-500 mt-4 space-y-1">
         <div>Popularity: {movie.popularity ?? 0}</div>
         <div>Votes: {movie.voteCount ?? 0} (avg {movie.voteAverage ?? 0})</div>
         <div>Heat: {movie.heatCount ?? 0}</div>
@@ -102,7 +124,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ id, movie }) => {
 export default MoviePage;
 
 export const getServerSideProps: GetServerSideProps<MoviePageProps> = async (context) => {
-  const { id } = context.params as { id: string };
+  const params = context.params as { id?: string } | undefined;
+  const id = params?.id ?? "";
+
+  if (!id) {
+    return { props: { id: "", movie: null } };
+  }
 
   try {
     const ref = doc(db, "movies", id);
@@ -112,17 +139,20 @@ export const getServerSideProps: GetServerSideProps<MoviePageProps> = async (con
       return { props: { id, movie: null } };
     }
 
-    const raw = snap.data() as Record<string, any>;
-    // Build a serializable object
+    const raw = snap.data() as DocumentData;
+
     const movie: MovieData = {
-      title: raw.title ?? null,
-      poster: raw.poster ?? null,
-      synopsis: raw.synopsis ?? null,
-      popularity: typeof raw.popularity === "number" ? raw.popularity : Number(raw.popularity ?? 0),
-      tmdbId: raw.tmdbId ? Number(raw.tmdbId) : undefined,
-      voteAverage: raw.voteAverage ? Number(raw.voteAverage) : undefined,
-      voteCount: raw.voteCount ? Number(raw.voteCount) : undefined,
-      heatCount: raw.heatCount ? Number(raw.heatCount) : undefined,
+      title: (raw.title ?? null) as string | null,
+      poster: (raw.poster ?? null) as string | null,
+      synopsis: (raw.synopsis ?? null) as string | null,
+      popularity:
+        typeof raw.popularity === "number"
+          ? raw.popularity
+          : Number(raw.popularity ?? 0),
+      tmdbId: raw.tmdbId != null ? Number(raw.tmdbId) : undefined,
+      voteAverage: raw.voteAverage != null ? Number(raw.voteAverage) : undefined,
+      voteCount: raw.voteCount != null ? Number(raw.voteCount) : undefined,
+      heatCount: raw.heatCount != null ? Number(raw.heatCount) : undefined,
       trending: typeof raw.trending === "boolean" ? raw.trending : Boolean(raw.trending),
       updatedAt: raw.updatedAt ? serializeFirestoreValue(raw.updatedAt) : null,
     };
@@ -134,6 +164,7 @@ export const getServerSideProps: GetServerSideProps<MoviePageProps> = async (con
       },
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error fetching movie:", error);
     return { props: { id, movie: null } };
   }

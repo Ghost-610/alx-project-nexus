@@ -9,18 +9,18 @@ import {
   orderBy,
   limit,
   getDocs,
-  DocumentData,
-  QuerySnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/clientApp";
 import HeatButton from "@/components/HeatButton";
-import { useAuth } from "@/hooks/useAuth"; // use named import to match your hook
+import { useAuth } from "@/hooks/useAuth";
+import Image from "next/image";
+import Link from "next/link";
 
 type Movie = {
   id: string;
-  title?: string;
-  poster?: string;
-  synopsis?: string;
+  title?: string | null;
+  poster?: string | null;
+  synopsis?: string | null;
   popularity?: number;
   heatCount?: number;
   trending?: boolean;
@@ -30,10 +30,10 @@ const PAGE_LIMIT = 12;
 
 const TrendingMovies: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [debugDocs, setDebugDocs] = useState<any[]>([]);
+  const [debugDocs, setDebugDocs] = useState<Array<{ id: string; data: Record<string, unknown> }>>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -63,17 +63,28 @@ const TrendingMovies: React.FC = () => {
         );
 
         console.log("[TrendingMovies] Running preferred query (where trending==true, orderBy popularity desc)");
-        let snap = await getDocs(qPreferred);
+        const snap = await getDocs(qPreferred);
         console.log("[TrendingMovies] preferred snapshot:", {
           size: snap.size,
-          docs: snap.docs.map(d => ({ id: d.id, data: d.data() })),
+          docs: snap.docs.map((d) => ({ id: d.id, data: d.data() })),
         });
 
         // If the preferred snapshot returned docs, use them
         if (!cancelled && !snap.empty) {
-          const docs: Movie[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+          const docs: Movie[] = snap.docs.map((d) => {
+            const raw = d.data() as Record<string, unknown>;
+            return {
+              id: d.id,
+              title: (raw.title as string) ?? null,
+              poster: (raw.poster as string) ?? null,
+              synopsis: (raw.synopsis as string) ?? null,
+              popularity: typeof raw.popularity === "number" ? raw.popularity : Number(raw.popularity ?? 0),
+              heatCount: typeof raw.heatCount === "number" ? raw.heatCount : Number(raw.heatCount ?? 0),
+              trending: typeof raw.trending === "boolean" ? raw.trending : Boolean(raw.trending),
+            };
+          });
           setMovies(docs);
-          setDebugDocs(snap.docs.map(d => ({ id: d.id, data: d.data() })));
+          setDebugDocs(snap.docs.map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> })));
           setInfo(`Using ${snap.size} document(s) from preferred query (trending==true).`);
           setLoading(false);
           return;
@@ -85,34 +96,51 @@ const TrendingMovies: React.FC = () => {
         const snapFallback = await getDocs(qFallback);
         console.log("[TrendingMovies] fallback snapshot:", {
           size: snapFallback.size,
-          docs: snapFallback.docs.map(d => ({ id: d.id, data: d.data() })),
+          docs: snapFallback.docs.map((d) => ({ id: d.id, data: d.data() })),
         });
 
         if (!cancelled) {
-          const docs: Movie[] = snapFallback.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+          const docs: Movie[] = snapFallback.docs.map((d) => {
+            const raw = d.data() as Record<string, unknown>;
+            return {
+              id: d.id,
+              title: (raw.title as string) ?? null,
+              poster: (raw.poster as string) ?? null,
+              synopsis: (raw.synopsis as string) ?? null,
+              popularity: typeof raw.popularity === "number" ? raw.popularity : Number(raw.popularity ?? 0),
+              heatCount: typeof raw.heatCount === "number" ? raw.heatCount : Number(raw.heatCount ?? 0),
+              trending: typeof raw.trending === "boolean" ? raw.trending : Boolean(raw.trending),
+            };
+          });
           setMovies(docs);
-          setDebugDocs(snapFallback.docs.map(d => ({ id: d.id, data: d.data() })));
-          setInfo(snapFallback.empty
-            ? "No documents found in `movies` collection."
-            : `No docs with trending==true. Showing top ${snapFallback.size} popular movies instead.`);
+          setDebugDocs(snapFallback.docs.map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> })));
+          setInfo(
+            snapFallback.empty
+              ? "No documents found in `movies` collection."
+              : `No docs with trending==true. Showing top ${snapFallback.size} popular movies instead.`
+          );
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        // Normalize error to string safely
         console.error("[TrendingMovies] fetch error:", err);
-        const msg = (err && err.code) ? err.code : (err && err.message) ? err.message : String(err);
+        const msg =
+          typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message?: unknown }).message ?? "")
+            : String(err);
 
         if (msg.includes("permission-denied") || msg.includes("PERMISSION_DENIED")) {
           setError("Permission denied: Firestore rules are blocking reads.");
-        } else if (msg.includes("failed-precondition") || (err?.message && err.message.includes("index"))) {
+        } else if (msg.includes("failed-precondition") || msg.includes("index")) {
           setError("Firestore requires a composite index for this query (where + orderBy). Check browser console for index link.");
         } else {
-          setError(err?.message ?? "Unknown error fetching trending movies.");
+          setError(msg || "Unknown error fetching trending movies.");
         }
         setLoading(false);
       }
     };
 
-    fetchTrending();
+    void fetchTrending();
 
     return () => {
       cancelled = true;
@@ -162,14 +190,17 @@ const TrendingMovies: React.FC = () => {
         {movies.map((m) => (
           <article key={m.id} className="bg-white/5 rounded-lg overflow-hidden shadow-sm">
             <div className="relative">
-              <img
+              <Image
                 src={m.poster ?? "/placeholder-movie.png"}
                 alt={m.title ?? "Movie poster"}
+                width={400}
+                height={224}
                 className="w-full h-56 object-cover"
                 loading="lazy"
               />
+
               <div className="absolute top-2 right-2">
-                <HeatButton movieId={m.id} currentHeat={m.heatCount ?? 0} user={user?.uid ?? null} />
+                <HeatButton movieId={m.id} user={user as import("firebase/auth").User | null} />
               </div>
             </div>
 
@@ -179,12 +210,9 @@ const TrendingMovies: React.FC = () => {
 
               <div className="mt-3 flex items-center justify-between">
                 <div className="text-xs text-gray-400">Popularity: {m.popularity ?? 0}</div>
-                <a
-                  href={`/movies/${m.id}`}
-                  className="text-xs border px-3 py-1 rounded text-amber-400 hover:bg-amber-400/10"
-                >
+                <Link href={`/movies/${m.id}`} className="text-xs border px-3 py-1 rounded text-amber-400 hover:bg-amber-400/10">
                   View
-                </a>
+                </Link>
               </div>
             </div>
           </article>
