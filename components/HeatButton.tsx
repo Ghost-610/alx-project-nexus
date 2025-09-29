@@ -32,7 +32,6 @@ const HeatButton: React.FC<Props> = ({ movieId, user }) => {
         const snap = await getDoc(favDoc);
         if (mounted) setIsFav(!!snap.exists());
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("checkFav error:", err);
         if (mounted) setIsFav(false);
       }
